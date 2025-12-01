@@ -1,0 +1,294 @@
+1. Medidas Principales de Negocio (KPIs)
+Estas son las métricas fundamentales que miden el rendimiento general.
+
+•	Total, Ganancias USD
+
+Total Ganancias USD = SUM('1- Tabla DataPlay Insights Normalizada'[Precio en USD])
+
+o	Descripción: Suma simple del precio de todos los videojuegos en el contexto de filtro actual para calcular los ingresos totales.
+
+•	Pico Max de Jugadores
+
+Pico Max de Jugadores = MAX( '2- Tabla Calidad'[Pico Histórico de Jugadores] )
+
+o	Descripción: Devuelve el valor más alto del pico histórico de jugadores, usado como principal indicador de popularidad.
+
+•	Recuento de Picos Históricos
+
+Recuento de Picos Históricos = SUM('2- Tabla Calidad'[Pico Histórico de Jugadores])
+
+o	Descripción: Suma todos los picos históricos de jugadores. Útil para entender el volumen total de jugadores en gráficos circulares o de área.
+
+•	Conteo Juegos
+
+ConteoJuegos = COUNT('1- Tabla DataPlay Insights Normalizada'[ID_Juegos])
+
+o	Descripción: Cuenta el número total de juegos en el contexto seleccionado.
+
+•	Promedio Review
+
+PromedioReview = AVERAGE('2- Tabla Calidad'[Review de usuarios])
+
+o	Descripción: Calcula la calificación promedio de los usuarios.
+
+
+2. Medidas de Segmentación por Calificación (Conteo)
+Estas medidas cuentan la cantidad de juegos que caen dentro de un rango de calificación específico.
+
+•	[Conteo] Excelentes 5 - 4.7
+
+Excelentes 5 - 4.7 = 
+CALCULATE(
+    COUNT('2- Tabla Calidad'[Review de usuarios]),
+    '2- Tabla Calidad'[Review de usuarios] >= 4.7 && '2- Tabla Calidad'[Review de usuarios] < 5
+)
+
+•	[Conteo] Bueno 4.6 - 4.5
+
+Bueno 4.6 - 4.5 = 
+CALCULATE(
+    COUNT('2- Tabla Calidad'[Review de usuarios]),
+    '2- Tabla Calidad'[Review de usuarios] >= 4.5 && '2- Tabla Calidad'[Review de usuarios] < 4.6
+)
+
+•	[Conteo] Intermedio 4.4-3
+
+Intermedio 4.4-3 = 
+CALCULATE(
+    COUNT('2- Tabla Calidad'[Review de usuarios]),
+    '2- Tabla Calidad'[Review de usuarios] >= 4 && '2- Tabla Calidad'[Review de usuarios] < 4.4
+)
+
+•	[Conteo] Malas 2.9 - 1
+
+Malas 2.9 - 1 = 
+CALCULATE(
+    COUNT('2- Tabla Calidad'[Review de usuarios]),
+    '2- Tabla Calidad'[Review de usuarios] >= 1 && '2- Tabla Calidad'[Review de usuarios] < 3.9
+)
+
+3. Medidas Avanzadas de Ranking y Contexto
+Medidas complejas utilizadas para identificar los "mejores" o "peores" en diferentes categorías, a menudo para tooltips o tarjetas de KPI.
+
+•	Desarrollador Mejor Review
+
+Desarrollador Mejor Review = 
+VAR Max_Excelentes = MAXX(ALL('4- Tabla Desarrollador'[Desarrollador]), [Excelentes 5 - 4.7])
+RETURN
+CALCULATE(
+    FIRSTNONBLANK('4- Tabla Desarrollador'[Desarrollador], 1),
+     FILTER(ALL('4- Tabla Desarrollador'), [Excelentes 5 - 4.7] = Max_Excelentes)
+)
+
+o	Descripción: Identifica y devuelve el nombre del desarrollador con la mayor cantidad de juegos calificados como "Excelentes".
+
+•	Desarrollador Mas Intermedio
+
+Desarrollador Mas Intermedio = 
+VAR Max_Intermedio = MAXX(ALL('4- Tabla Desarrollador'[Desarrollador]), [Intermedio 4.4-3])
+RETURN
+CALCULATE(
+    FIRSTNONBLANK('4- Tabla Desarrollador'[Desarrollador], 1),
+     FILTER(ALL('4- Tabla Desarrollador'), [Intermedio 4.4-3] = Max_Intermedio)
+)
+
+o	Descripción: Identifica al desarrollador con más juegos de calificación "Intermedia".
+
+•	Desarrollador Mas Malo
+
+Desarrollador Mas Malo = 
+VAR Max_Malo = MAXX(ALL('4- Tabla Desarrollador'[Desarrollador]), [Malas 2.9 - 1])
+RETURN
+CALCULATE(
+    FIRSTNONBLANK('4- Tabla Desarrollador'[Desarrollador], 1),
+     FILTER(ALL('4- Tabla Desarrollador'), [Malas 2.9 - 1] = Max_Malo)
+)
+
+o	Descripción: Identifica al desarrollador con más juegos de calificación "Mala".
+
+•	Estudio Mas Excelentes
+
+Estudio Mas Excelentes = 
+VAR Max_Excelentes = MAXX(ALL('5- Tabla Estudio'[Estudio]), [Excelentes 5 - 4.7])
+RETURN
+CALCULATE(
+    FIRSTNONBLANK('5- Tabla Estudio'[Estudio], 1),
+     FILTER(ALL('5- Tabla Estudio'), [Excelentes 5 - 4.7] = Max_Excelentes)
+)
+
+o	Descripción: Similar a la anterior, pero identifica al estudio con más juegos "Excelentes".
+
+•	Juego_Mayor_Review_Por_Año
+
+
+Juego_Mayor_Review_Por_Año = 
+VAR TablaResumen = 
+    SUMMARIZE(
+        '1- Tabla DataPlay Insights Normalizada',
+        '1- Tabla DataPlay Insights Normalizada'[Titulo del Juego],
+        "AvgReview", AVERAGE('2- Tabla Calidad'[Review de usuarios])
+    )
+VAR MaxReview = MAXX(TablaResumen, [AvgReview])
+RETURN
+    CALCULATE(
+        MAXX(
+            FILTER(TablaResumen, [AvgReview] = MaxReview),
+            '1- Tabla DataPlay Insights Normalizada'[Titulo del Juego]
+        )
+    )
+
+o	Descripción: Identifica y devuelve el título del juego con la calificación promedio más alta dentro del contexto de filtro actual (por ejemplo, en un año específico).
+
+
+4. Medidas de Contexto para Tooltips (Género Dominante)
+Estas medidas complejas no devuelven un número, sino el nombre del género más frecuente dentro de cada categoría de calificación. Son las que usaste en los tooltips del gráfico de líneas.
+
+
+•	[Tooltip] Género Dominante Excelente
+
+Excelente 5-4.7 = 
+IF(
+    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
+    BLANK(),  -- No muestra nada en el tooltip
+    -- Si no hay filtro
+VAR TablaResumen = 
+    SUMMARIZE(
+        '6- Tabla Genero',
+        '6- Tabla Genero'[Género],
+        "Conteo", 
+        CALCULATE(
+            COUNTROWS('2- Tabla Calidad'),
+            '2- Tabla Calidad'[Review de usuarios]>= 4.7,
+            '2- Tabla Calidad'[Review de usuarios] <= 5
+        )
+    )
+VAR MaxConteo = MAXX(TablaResumen, [Conteo])
+RETURN
+    CALCULATE(
+        MAXX(
+            FILTER(TablaResumen, [Conteo] = MaxConteo),
+            '6- Tabla Genero'[Género]
+        )
+    ))
+
+•	[Tooltip] Género Dominante Bueno
+
+Bueno. 4.6- 4.5 = 
+
+IF(
+    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
+    BLANK(),  -- No muestra nada en el tooltip
+    -- Si no hay filtro
+VAR TablaResumen = 
+    SUMMARIZE(
+        '6- Tabla Genero',
+        '6- Tabla Genero'[Género],
+        "Conteo", 
+        CALCULATE(
+            COUNTROWS('2- Tabla Calidad'),
+            '2- Tabla Calidad'[Review de usuarios]>= 4.5,
+            '2- Tabla Calidad'[Review de usuarios] <= 4.6
+        )
+    )
+VAR MaxConteo = MAXX(TablaResumen, [Conteo])
+RETURN
+    CALCULATE(
+        MAXX(
+            FILTER(TablaResumen, [Conteo] = MaxConteo),
+            '6- Tabla Genero'[Género]
+        )
+    ))
+
+•	[Tooltip] Género Dominante Intermedio
+
+Intermedio 4.4- 3 = 
+
+IF(
+    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
+    BLANK(),  -- No muestra nada en el tooltip
+    -- Si no hay filtro
+VAR TablaResumen = 
+    SUMMARIZE(
+        '6- Tabla Genero',
+        '6- Tabla Genero'[Género],
+        "Conteo", 
+        CALCULATE(
+            COUNTROWS('2- Tabla Calidad'),
+            '2- Tabla Calidad'[Review de usuarios]>= 4,
+            '2- Tabla Calidad'[Review de usuarios] <= 4.4
+        )
+    )
+VAR MaxConteo = MAXX(TablaResumen, [Conteo])
+RETURN
+    CALCULATE(
+        MAXX(
+            FILTER(TablaResumen, [Conteo] = MaxConteo),
+            '6- Tabla Genero'[Género]
+        )
+    ))
+
+•	[Tooltip] Género Dominante Malo
+
+Malo 3-1 = 
+
+IF(
+    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
+    BLANK(),  -- No muestra nada en el tooltip
+    -- Si no hay filtro
+VAR TablaResumen = 
+    SUMMARIZE(
+        '6- Tabla Genero',
+        '6- Tabla Genero'[Género],
+        "Conteo", 
+        CALCULATE(
+            COUNTROWS('2- Tabla Calidad'),
+            '2- Tabla Calidad'[Review de usuarios]>= 1,
+            '2- Tabla Calidad'[Review de usuarios] <= 3.9
+        )
+    )
+VAR MaxConteo = MAXX(TablaResumen, [Conteo])
+RETURN
+    CALCULATE(
+        MAXX(
+            FILTER(TablaResumen, [Conteo] = MaxConteo),
+            '6- Tabla Genero'[Género]
+        )
+    ))
+
+o	Descripción: Todas estas medidas siguen la misma lógica crean una tabla virtual que cuenta cuántos juegos de cada género pertenecen a una categoría de review (Excelente, Bueno, etc.). Luego, identifican el género con el conteo más alto y devuelven su nombre. El IF(HASONEVALUE(...)) inteligentemente desactiva la medida si ya se está filtrando por un solo género.
+
+5. Columnas Calculadas (Tabla Calendario)
+Estas fórmulas no son medidas, sino columnas que se añaden a la Tabla Calendario para permitir el análisis temporal.
+
+•	Año
+
+Año = YEAR('Tabla Calendario'[Fecha de Lanzamiento])
+
+•	ID_Fecha (Formato Texto)
+
+ID_Fecha = FORMAT('Tabla Calendario'[Fecha de Lanzamiento], "DD/MM/YYYY")
+
+•	Nombre del Mes
+
+Nombre del Mes = FORMAT('Tabla Calendario'[Fecha de Lanzamiento], "MMM")
+
+•	Numero del mes
+
+Numero del mes = MONTH('Tabla Calendario'[Fecha de Lanzamiento])
+
+
+6. Tablas Calculadas
+Fórmulas DAX que generan tablas completas dentro del modelo.
+
+•	Tabla Complementaria Reviews
+
+Tabla Complementaria Reviews = SELECTCOLUMNS(
+    NATURALINNERJOIN('2- Tabla Calidad', '6- Tabla Genero'),
+    "ID_Juego", '2- Tabla Calidad'[ID_Juegos],
+    "Review", '2- Tabla Calidad'[Review de usuarios],
+    "CalidadGrafica", '2- Tabla Calidad'[Calidad gráfica],
+    "CalidadHistoria", '2- Tabla Calidad'[Calidad de la historia],
+    "Genero", '6- Tabla Genero'[Género]
+)
+
+o	Descripción: Crea una nueva tabla desnormalizada que combina información de la tabla de Calidad y la de Género. Esta tabla puede ser útil para análisis específicos o como paso intermedio para otras visualizaciones, aunque no estaba conectada en el modelo principal.
