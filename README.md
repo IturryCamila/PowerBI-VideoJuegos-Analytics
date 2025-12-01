@@ -75,121 +75,49 @@ Aquí puedes ver las diferentes secciones del dashboard "DataPlay Insights". Cad
 *   Este modelo normalizado optimiza el rendimiento en Power BI y asegura que no haya redundancia de datos.
 ![DER](https://github.com/IturryCamila/PowerBI-VideoJuegos-Analytics/blob/main/Imagenes/Digrama%20de%20ER%20-%20DataPlay%20Insights.jpg?raw=true).
 
-#### 3. Fórmulas DAX Clave
-Para potenciar el análisis, se crearon varias medidas complejas en DAX. Aquí hay algunos ejemplos:
+### 3. Fórmulas DAX Clave: Inteligencia de Negocio en Acción
 
-•	[Tooltip] Género Dominante Excelente
+Para potenciar el análisis y la interactividad del dashboard, se crearon varias medidas complejas en DAX. A continuación, se desglosa una de las más importantes como caso de estudio: `[Tooltip] Género Dominante Excelente`.
 
-Excelente 5-4.7 = 
-IF(
-    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
-    BLANK(),  -- No muestra nada en el tooltip
-    -- Si no hay filtro
-VAR TablaResumen = 
-    SUMMARIZE(
+#### El Problema de Negocio:
+En el gráfico de líneas que muestra la evolución de las reseñas por año, un tooltip simple solo mostraría un número (ej: "4 juegos excelentes en 2018"). Para aportar un insight más profundo, el objetivo era que el tooltip respondiera a la pregunta: **"Ok, pero ¿de qué género fueron la mayoría de esos juegos excelentes?"**.
+
+#### La Solución Técnica:
+Esta medida no devuelve un número, sino un **texto**: el nombre del género más frecuente dentro de la categoría "Excelente" para el contexto de filtro actual (por ejemplo, un año específico).
+
+```dax
+-- Muestra el género con más juegos calificados como "Excelente" (4.7 a 5 estrellas)
+-- para un contexto de filtro específico (ej. un año en un tooltip).
+
+[Tooltip] Género Dominante Excelente =
+VAR TablaResumen =
+    SUMMARIZE (
         '6- Tabla Genero',
         '6- Tabla Genero'[Género],
-        "Conteo", 
-        CALCULATE(
-            COUNTROWS('2- Tabla Calidad'),
-            '2- Tabla Calidad'[Review de usuarios]>= 4.7,
+        "Conteo", CALCULATE (
+            COUNTROWS ( '2- Tabla Calidad' ),
+            '2- Tabla Calidad'[Review de usuarios] >= 4.7,
             '2- Tabla Calidad'[Review de usuarios] <= 5
         )
     )
-VAR MaxConteo = MAXX(TablaResumen, [Conteo])
+VAR MaxConteo =
+    MAXX ( TablaResumen, [Conteo] )
 RETURN
-    CALCULATE(
-        MAXX(
-            FILTER(TablaResumen, [Conteo] = MaxConteo),
+    CALCULATE (
+        -- Usamos MAXX en una columna de texto para devolver el nombre del género.
+        -- Funciona porque el filtro garantiza que solo hay una fila con el MaxConteo.
+        MAXX (
+            FILTER ( TablaResumen, [Conteo] = MaxConteo ),
             '6- Tabla Genero'[Género]
-        )
-    ))
-
-•	[Tooltip] Género Dominante Bueno
-
-Bueno. 4.6- 4.5 = 
-
-IF(
-    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
-    BLANK(),  -- No muestra nada en el tooltip
-    -- Si no hay filtro
-VAR TablaResumen = 
-    SUMMARIZE(
-        '6- Tabla Genero',
-        '6- Tabla Genero'[Género],
-        "Conteo", 
-        CALCULATE(
-            COUNTROWS('2- Tabla Calidad'),
-            '2- Tabla Calidad'[Review de usuarios]>= 4.5,
-            '2- Tabla Calidad'[Review de usuarios] <= 4.6
         )
     )
-VAR MaxConteo = MAXX(TablaResumen, [Conteo])
-RETURN
-    CALCULATE(
-        MAXX(
-            FILTER(TablaResumen, [Conteo] = MaxConteo),
-            '6- Tabla Genero'[Género]
-        )
-    ))
+```
+> *Nota: Las medidas para "Bueno", "Intermedio" y "Malo" siguen exactamente esta misma lógica, cambiando únicamente el rango de calificación en el filtro de `CALCULATE`.*
 
-•	[Tooltip] Género Dominante Intermedio
+#### El Truco Profesional (`IF HASONEVALUE`):
+En el código original, se utiliza `IF(HASONEVALUE('2- Tabla Calidad'[Género]), BLANK(), ...)` al principio de la fórmula.
 
-Intermedio 4.4- 3 = 
-
-IF(
-    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
-    BLANK(),  -- No muestra nada en el tooltip
-    -- Si no hay filtro
-VAR TablaResumen = 
-    SUMMARIZE(
-        '6- Tabla Genero',
-        '6- Tabla Genero'[Género],
-        "Conteo", 
-        CALCULATE(
-            COUNTROWS('2- Tabla Calidad'),
-            '2- Tabla Calidad'[Review de usuarios]>= 4,
-            '2- Tabla Calidad'[Review de usuarios] <= 4.4
-        )
-    )
-VAR MaxConteo = MAXX(TablaResumen, [Conteo])
-RETURN
-    CALCULATE(
-        MAXX(
-            FILTER(TablaResumen, [Conteo] = MaxConteo),
-            '6- Tabla Genero'[Género]
-        )
-    ))
-
-•	[Tooltip] Género Dominante Malo
-
-Malo 3-1 = 
-
-IF(
-    HASONEVALUE('2- Tabla Calidad'[Género]),  -- Si hay un género seleccionado
-    BLANK(),  -- No muestra nada en el tooltip
-    -- Si no hay filtro
-VAR TablaResumen = 
-    SUMMARIZE(
-        '6- Tabla Genero',
-        '6- Tabla Genero'[Género],
-        "Conteo", 
-        CALCULATE(
-            COUNTROWS('2- Tabla Calidad'),
-            '2- Tabla Calidad'[Review de usuarios]>= 1,
-            '2- Tabla Calidad'[Review de usuarios] <= 3.9
-        )
-    )
-VAR MaxConteo = MAXX(TablaResumen, [Conteo])
-RETURN
-    CALCULATE(
-        MAXX(
-            FILTER(TablaResumen, [Conteo] = MaxConteo),
-            '6- Tabla Genero'[Género]
-        )
-    ))
-
-o	Descripción: Todas estas medidas siguen la misma lógica crean una tabla virtual que cuenta cuántos juegos de cada género pertenecen a una categoría de review (Excelente, Bueno, etc.). Luego, identifican el género con el conteo más alto y devuelven su nombre. El IF(HASONEVALUE(...)) inteligentemente desactiva la medida si ya se está filtrando por un solo género.
+Este es un **control de contexto avanzado**. Su función es desactivar la medida inteligentemente si el usuario ya está filtrando por un solo género en el dashboard. En ese caso, preguntar "¿cuál es el género dominante?" no tiene sentido, por lo que la fórmula devuelve un espacio en blanco (`BLANK()`) para mantener el tooltip limpio. Esto demuestra un diseño de medidas robusto y centrado en la experiencia del usuario.
 
 ---
 
